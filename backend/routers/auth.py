@@ -1,6 +1,7 @@
+import re
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, field_validator
 from sqlmodel import Session, select
 from database import get_session
 from models import User
@@ -13,12 +14,29 @@ from auth import (
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
+EMAIL_REGEX = re.compile(r"^[\w\.\+\-]+@[a-zA-Z0-9\.\-]+\.[a-zA-Z0-9\-]+$")
+
 
 class RegisterRequest(BaseModel):
-    email: EmailStr
+    email: str
     username: str
     password: str
     full_name: Optional[str] = None
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        clean_email = v.strip().lower()
+        if not EMAIL_REGEX.match(clean_email):
+            raise ValueError("Invalid email format")
+        return clean_email
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        if len(v) < 6:
+            raise ValueError("Password must be at least 6 characters long")
+        return v
 
 
 class LoginRequest(BaseModel):
