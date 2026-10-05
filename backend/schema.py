@@ -1,4 +1,5 @@
 import strawberry
+from strawberry.types import Info
 from typing import Optional, List
 from datetime import datetime
 from sqlmodel import Session, select
@@ -56,7 +57,7 @@ class ProjectType:
     updated_at: datetime
 
     @strawberry.field
-    def contents(self, info) -> List[ContentTypeGQL]:
+    def contents(self) -> List[ContentTypeGQL]:
         with Session(engine) as session:
             stmt = select(ContentModel).where(ContentModel.project_id == self.id)
             items = session.exec(stmt).all()
@@ -91,7 +92,7 @@ class WorkspaceType:
     updated_at: datetime
 
     @strawberry.field
-    def projects(self, info) -> List[ProjectType]:
+    def projects(self) -> List[ProjectType]:
         with Session(engine) as session:
             stmt = select(ProjectModel).where(ProjectModel.workspace_id == self.id)
             items = session.exec(stmt).all()
@@ -116,7 +117,7 @@ class AuthPayload:
     user: UserType
 
 
-def get_user_from_info(info) -> Optional[UserModel]:
+def get_user_from_info(info: Info) -> Optional[UserModel]:
     request = info.context.get("request")
     if not request:
         return None
@@ -137,7 +138,7 @@ def get_user_from_info(info) -> Optional[UserModel]:
 @strawberry.type
 class Query:
     @strawberry.field
-    def me(self, info) -> Optional[UserType]:
+    def me(self, info: Info) -> Optional[UserType]:
         user = get_user_from_info(info)
         if not user:
             return None
@@ -150,7 +151,7 @@ class Query:
         )
 
     @strawberry.field
-    def workspaces(self, info) -> List[WorkspaceType]:
+    def workspaces(self, info: Info) -> List[WorkspaceType]:
         user = get_user_from_info(info)
         if not user:
             raise Exception("Authentication required")
@@ -171,7 +172,7 @@ class Query:
             ]
 
     @strawberry.field
-    def workspace(self, info, id: int) -> Optional[WorkspaceType]:
+    def workspace(self, info: Info, id: int) -> Optional[WorkspaceType]:
         user = get_user_from_info(info)
         if not user:
             raise Exception("Authentication required")
@@ -190,7 +191,7 @@ class Query:
             )
 
     @strawberry.field
-    def project(self, info, id: int) -> Optional[ProjectType]:
+    def project(self, info: Info, id: int) -> Optional[ProjectType]:
         user = get_user_from_info(info)
         with Session(engine) as session:
             p = session.get(ProjectModel, id)
@@ -213,7 +214,7 @@ class Query:
             )
 
     @strawberry.field
-    def content(self, info, id: int) -> Optional[ContentTypeGQL]:
+    def content(self, info: Info, id: int) -> Optional[ContentTypeGQL]:
         user = get_user_from_info(info)
         with Session(engine) as session:
             c = session.get(ContentModel, id)
@@ -314,7 +315,7 @@ class Mutation:
             )
 
     @strawberry.mutation
-    def create_workspace(self, info, name: str, description: Optional[str] = None) -> WorkspaceType:
+    def create_workspace(self, info: Info, name: str, description: Optional[str] = None) -> WorkspaceType:
         user = get_user_from_info(info)
         if not user:
             raise Exception("Authentication required")
@@ -335,7 +336,7 @@ class Mutation:
             )
 
     @strawberry.mutation
-    def publish_content(self, info, id: int, is_published: bool) -> ContentTypeGQL:
+    def publish_content(self, info: Info, id: int, is_published: bool) -> ContentTypeGQL:
         user = get_user_from_info(info)
         if not user:
             raise Exception("Authentication required")
